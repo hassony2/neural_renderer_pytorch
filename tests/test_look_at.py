@@ -42,6 +42,6 @@ def test_th_look_at():
     vertices = np.array([1, 0, 0], 'float32')
     vertices = vertices[None, None, :]
     for e, a in zip(eyes, answers):
-        eye = np.array(e, 'float32')
-        transformed = look_at_th(vertices, eye)
+        eye = torch.Tensor(np.array(e, 'float32'))
+        transformed = look_at_th(torch.Tensor(vertices), eye)
         assert (transformed - torch.Tensor(a)).norm().item() < 1e-6

@@ -27,7 +27,8 @@ import os
 import string
 
 import numpy as np
-import skimage.io
+
+# import skimage.io
 
 
 def load_mtl(filename_mtl):

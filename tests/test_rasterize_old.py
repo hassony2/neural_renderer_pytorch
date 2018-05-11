@@ -1,7 +1,8 @@
 import torch
 import numpy as np
 
-from neurender.rasterize import (get_line_coeffs, get_line_coeff, order_points)
+from neurender.rasterize import (get_line_coeffs, get_line_coeff, order_points,
+                                 Rasterize)
 from neurender.vertices_to_faces import vertices_to_faces, vertices_to_faces_th
 from tests import utils
 
@@ -20,6 +21,9 @@ def test_load_teapot():
 
 faces = vertices_to_faces(vertices, faces)
 faces_th = vertices_to_faces_th(vertices_th, faces_th)
+
+image_size = 256
+anti_aliasing = False
 
 
 def test_vertices_to_faces():

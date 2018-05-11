@@ -9,7 +9,10 @@ def look_at_th(vertices, eye, at=None, up=None):
     """
     "Look at" transformation of vertices.
     """
-    assert (vertices.ndim == 3)
+    if isinstance(vertices, torch.Tensor):
+        assert (vertices.dim() == 3)
+    else:
+        assert (vertices.ndim == 3)
 
     batch_size = vertices.shape[0]
     if at is None:
@@ -43,7 +46,7 @@ def look_at_th(vertices, eye, at=None, up=None):
     # apply
     # [bs, nv, 3] -> [bs, nv, 3] -> [bs, nv, 3]
     if vertices.shape != eye.shape:
-        eye = eye.unsqueeze(0).repeat(vertices.shape[0], vertices.shape[1], 1)
+        eye = eye.unsqueeze(1).repeat(1, vertices.shape[1], 1)
     vertices = vertices - eye
     vertices = torch.matmul(vertices, rot.transpose(1, 2))
 

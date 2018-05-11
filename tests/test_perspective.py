@@ -22,6 +22,6 @@ def test_perspective_th():
     v_in = [1, 2, 10]
     v_out = [np.sqrt(3) / 10, 2 * np.sqrt(3) / 10, 10]
     vertices = np.array(v_in, 'float32')
-    vertices = vertices[None, None, :]
+    vertices = torch.Tensor(vertices[None, None, :])
     transformed = perspective_th(vertices)
     assert (torch.Tensor(v_out) - transformed).norm().item() < 1e-5

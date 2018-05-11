@@ -1,10 +1,11 @@
-import chainer
-import chainer.functions as cf
 import torch
 
 
 def perspective_th(vertices, angle=30.):
-    assert (vertices.ndim == 3)
+    if isinstance(vertices, torch.Tensor):
+        assert (vertices.dim() == 3)
+    else:
+        assert (vertices.ndim == 3)
     angle = torch.Tensor([angle])
     angle = angle / 180. * 3.1416
     angle.repeat(vertices.shape[0])
