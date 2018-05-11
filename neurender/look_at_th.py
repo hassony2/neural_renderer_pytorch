@@ -33,21 +33,21 @@ def look_at_th(vertices, eye, at=None, up=None):
         up = up.unsqueeze(0).repeat(batch_size, 1)
 
     # create new axes
-    z_axis_norm = (at - eye) / (at - eye).norm()
+    z_axis = (at - eye)
+    z_axis_norm = z_axis / torch.norm(z_axis, p=2, dim=1).unsqueeze(1)
     x_axis = torch.cross(up, z_axis_norm)
-    x_axis_norm = x_axis / x_axis.norm()
+    x_axis_norm = x_axis / torch.norm(x_axis, p=2, dim=1).unsqueeze(1)
     y_axis = torch.cross(z_axis_norm, x_axis)
-    y_axis_norm = y_axis / y_axis.norm()
+    y_axis_norm = y_axis / torch.norm(y_axis, p=2, dim=1).unsqueeze(1)
 
     # create rotation matrix: [bs, 3, 3]
-    rot = torch.cat([x_axis_norm, y_axis_norm,
-                     z_axis_norm]).unsqueeze(0).repeat(vertices.shape[0], 1, 1)
+    rot = torch.stack([x_axis_norm, y_axis_norm, z_axis_norm], dim=2)
 
     # apply
     # [bs, nv, 3] -> [bs, nv, 3] -> [bs, nv, 3]
     if vertices.shape != eye.shape:
         eye = eye.unsqueeze(1).repeat(1, vertices.shape[1], 1)
     vertices = vertices - eye
-    vertices = torch.matmul(vertices, rot.transpose(1, 2))
+    vertices = torch.matmul(vertices, rot)
 
     return vertices
