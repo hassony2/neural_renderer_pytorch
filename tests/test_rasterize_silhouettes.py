@@ -1,4 +1,6 @@
 import math
+
+import pytest
 import chainer
 import chainer.functions as cf
 import chainer.gradient_check
@@ -45,6 +47,7 @@ def test_compare_preprocess():
     assert np.mean(np.abs(faces_2.data.get() - faces_2_th.numpy())) < 1e-5
 
 
+@pytest.mark.skip(reason="slow")
 def test_forward_chainer():
     """Whether a silhouette by neural renderer matches that by Blender."""
 
@@ -69,18 +72,31 @@ def test_forward_chainer():
     chainer.testing.assert_allclose(ref, image)
 
 
-# def test_forward_th():
-#     """Whether a silhouette by neural renderer matches that by Blender."""
-#
-#     # load teapot
-#     vertices, faces, textures = utils.load_teapot_batch_th()
-#
-#     # create renderer
-#     renderer = RendererTh()
-#     renderer.image_size = 256
-#     renderer.anti_aliasing = False
-#
-#     images = renderer.render_silhouettes(vertices, faces)
+# @pytest.mark.skip(reason="slow")
+def test_forward_th():
+    """Whether a silhouette by neural renderer matches that by Blender."""
+
+    # load teapot
+    vertices, faces, textures = utils.load_teapot_batch()
+    vertices_th, faces_th, textures_th = utils.load_teapot_batch_th()
+
+    # create renderer
+    renderer_th = RendererTh()
+    renderer_th.image_size = 256
+    renderer_th.anti_aliasing = False
+
+    renderer = Renderer()
+    renderer.fill_back = False
+    renderer.image_size = 256
+    renderer.anti_aliasing = False
+
+    images = renderer.render_silhouettes(vertices, faces)
+    images_th = renderer.render_silhouettes(
+        cp.asarray(vertices_th.cpu().numpy()),
+        cp.asarray(faces_th.cpu().numpy()))
+    assert (images_th - images).data.get().sum() == 0
+
+
 #     images = images.data.get()
 #     image = images[2]
 #

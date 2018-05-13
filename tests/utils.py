@@ -70,4 +70,4 @@ def load_teapot_batch_th(batch_size=4, target_num=2):
     textures = np.ones((faces.shape[0], 4, 4, 4, 3), 'float32')
     vertices_th, faces_th, textures_th = to_minibatch_th(
         (vertices, faces, textures), batch_size, target_num)
-    return vertices_th, faces_th, textures_th
+    return vertices_th, faces_th.int(), textures_th

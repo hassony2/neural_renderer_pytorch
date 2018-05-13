@@ -36,6 +36,6 @@ def vertices_to_faces_th(vertices, faces):
 
     bs, nv = vertices.shape[:2]
     bs, nf = faces.shape[:2]
-    faces = faces + (torch.arange(bs) * nv).view(-1, 1, 1)
+    faces = faces + ((torch.arange(bs) * nv).int()).view(-1, 1, 1)
     vertices = vertices.reshape((bs * nv, 3))
     return vertices[faces.long()]
