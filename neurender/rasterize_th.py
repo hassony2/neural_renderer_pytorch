@@ -28,12 +28,12 @@ class RasterizeSilF(Function):
     @staticmethod
     def forward(ctx, faces, rasterize):
         ctx.rasterize = rasterize
-        faces = chainer.Variable(faces.detach().cpu().numpy())
-        faces.to_gpu()
-        ctx.inputs = (faces, )
-        outputs = rasterize(faces)
+        faces_ch = chainer.Variable(faces.detach().cpu().numpy())
+        faces_ch.to_gpu()
+        ctx.inputs = (faces_ch, )
+        outputs = rasterize(faces_ch)
         ctx.outputs = outputs
-        outputs = Variable(torch.Tensor(outputs.data.get()).cuda())
+        outputs = faces.new(outputs.data.get())
         return outputs
 
     @staticmethod
@@ -43,7 +43,7 @@ class RasterizeSilF(Function):
         ctx.outputs.grad = grad_cp
         ctx.outputs.backward()
         back = ctx.inputs[0].grad.get()
-        back = torch.Tensor(back)
+        back = grad_out.new(back)
         return back, None
 
 
@@ -66,14 +66,14 @@ class RasterizeRGBF(Function):
     @staticmethod
     def forward(ctx, faces, textures, rasterize):
         ctx.rasterize = rasterize
-        faces = chainer.Variable(faces.detach().cpu().numpy())
+        faces_ch = chainer.Variable(faces.detach().cpu().numpy())
         textures = chainer.Variable(textures.detach().cpu().numpy())
-        faces.to_gpu()
+        faces_ch.to_gpu()
         textures.to_gpu()
-        ctx.inputs = (faces, textures)
-        outputs = rasterize(faces, textures)
+        ctx.inputs = (faces_ch, textures)
+        outputs = rasterize(faces_ch, textures)
         ctx.outputs = outputs
-        outputs = Variable(torch.Tensor(outputs.data.get()).cuda())
+        outputs = faces.new(outputs.data.get())
         return outputs
 
     @staticmethod
@@ -85,9 +85,9 @@ class RasterizeRGBF(Function):
 
         # Get vertices gradients
         back_verts = ctx.inputs[0].grad.get()
-        back_verts = torch.Tensor(back_verts)
+        back_verts = grad_out.new(back_verts)
 
         # Get textures gradients
         back_text = ctx.inputs[1].grad.get()
-        back_text = torch.Tensor(back_text)
+        back_text = grad_out.new(back_text)
         return back_verts, back_text, None

@@ -71,12 +71,12 @@ def lighting_th(faces,
 
     # arguments
     if isinstance(color_ambient, tuple) or isinstance(color_ambient, list):
-        color_ambient = torch.Tensor(color_ambient).float()
+        color_ambient = faces.new(color_ambient).float()
     if isinstance(color_directional, tuple) or isinstance(
             color_directional, list):
-        color_directional = torch.Tensor(color_directional).float()
+        color_directional = faces.new(color_directional).float()
     if isinstance(direction, tuple) or isinstance(direction, list):
-        direction = torch.Tensor(direction).float()
+        direction = faces.new(direction).float()
     if color_ambient.dim() == 1:
         color_ambient = color_ambient.unsqueeze(0).repeat(bs, 1)
     if color_directional.dim() == 1:

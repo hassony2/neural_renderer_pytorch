@@ -8,6 +8,7 @@ from neurender.vertices_to_faces import vertices_to_faces_th
 from neurender.look_at_th import look_at_th
 from neurender.lighting import lighting_th
 from neurender.rasterize import rasterize_silhouettes, rasterize
+from neurender.rasterize_th import RasterizeRGB, RasterizeSil
 
 
 class Renderer(object):
@@ -38,6 +39,12 @@ class Renderer(object):
 
         # rasterization
         self.rasterizer_eps = 1e-3
+        self.rasterize_rgb = RasterizeRGB(self.image_size, self.near, self.far,
+                                          self.rasterizer_eps,
+                                          self.background_color)
+        self.rasterize_sil = RasterizeSil(self.image_size, self.near, self.far,
+                                          self.rasterizer_eps,
+                                          self.background_color)
 
     def render_silhouettes(self, vertices, faces):
         if self.fill_back:
@@ -55,8 +62,7 @@ class Renderer(object):
 
         # rasterization
         faces = vertices_to_faces_th(vertices, faces)
-        images = rasterize_silhouettes(faces, self.image_size,
-                                       self.anti_aliasing)
+        images = self.rasterize_sil(faces)
         return images
 
     def render_depth(self, vertices, faces):
@@ -108,7 +114,5 @@ class Renderer(object):
 
         # rasterization
         faces = vertices_to_faces_th(vertices, faces)
-        images = rasterize(faces, textures, self.image_size,
-                           self.anti_aliasing, self.near, self.far,
-                           self.rasterizer_eps, self.background_color)
+        images = self.rasterize_rgb(faces, textures)
         return images

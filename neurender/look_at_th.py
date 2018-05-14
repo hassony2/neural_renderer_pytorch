@@ -22,9 +22,9 @@ def look_at_th(vertices, eye, at=None, up=None):
 
     if isinstance(eye, list) or isinstance(eye, tuple):
         eye = np.array(eye, 'float32')
-    eye = torch.Tensor(eye)
-    at = torch.Tensor(at)
-    up = torch.Tensor(up)
+    eye = vertices.new(eye)
+    at = vertices.new(at)
+    up = vertices.new(up)
     if eye.dim() == 1:
         eye = eye.unsqueeze(0).repeat(batch_size, 1)
     if at.dim() == 1:
