@@ -10,7 +10,7 @@ DEFAULT_NEAR = 0.1
 DEFAULT_FAR = 100
 DEFAULT_EPS = 1e-4
 DEFAULT_BACKGROUND_COLOR = (0, 0, 0)
-USE_UNSAFE_IMPLEMENTATION = False
+USE_UNSAFE_IMPLEMENTATION = True
 
 if 'NEURAL_RENDERER_UNSAFE' in os.environ and int(
         os.environ['NEURAL_RENDERER_UNSAFE']):
@@ -997,11 +997,13 @@ def rasterize_rgbad(
         rgb = rgb.transpose((0, 3, 1, 2))
         rgb = rgb[:, :, ::-1, :]
     if return_alpha:
+        pass
         alpha = alpha[:, ::-1, :]
     if return_depth:
         depth = depth[:, ::-1, :]
 
     if anti_aliasing:
+        print('AntiAliasing !!')
         # 0.5x down-sampling
         if return_rgb:
             rgb = cf.average_pooling_2d(rgb, 2, 2)
