@@ -41,7 +41,6 @@ def preprocess_th(vertices_th,
     return faces_th
 
 
-@pytest.mark.skip()
 def test_forward_ch_1():
     """Rendering a teapot without anti-aliasing."""
 
@@ -62,7 +61,6 @@ def test_forward_ch_1():
     scipy.misc.imsave('./tests/data/test_rasterize1.png', image)
 
 
-@pytest.mark.skip()
 def test_forward_th_1():
     """Rendering a teapot without anti-aliasing."""
 
@@ -118,9 +116,6 @@ def test_forward_rgb_th():
     # load teapot
     vertices, faces, textures = utils.load_teapot_batch_th()
 
-    # Fill back by reversing face points order
-    faces = torch.cat([faces, faces[:, :, faces.new([2, 1, 0]).long()]], dim=1)
-    textures = torch.cat([textures, textures.permute(0, 1, 4, 3, 2, 5)], dim=1)
     # Add lighting
     light_intensity_ambient = 0.5
     light_intensity_directional = 0.5
@@ -131,6 +126,10 @@ def test_forward_rgb_th():
     textures = lighting_th(faces_lighting, textures, light_intensity_ambient,
                            light_intensity_directional, light_color_ambient,
                            light_color_directional, light_direction)
+
+    # Fill back by reversing face points order
+    faces = torch.cat([faces, faces[:, :, faces.new([2, 1, 0]).long()]], dim=1)
+    textures = torch.cat([textures, textures.permute(0, 1, 4, 3, 2, 5)], dim=1)
     faces_th = preprocess_th(vertices, faces, perspective=True)
     rasterize_rgb_th = RasterizeRGB(256, 0.1, 100, 1e-3, [0, 0, 0])
     images = rasterize_rgb_th(faces_th, textures)
@@ -199,116 +198,102 @@ def test_forward_rgb_th_3():
     scipy.misc.imsave('./tests/data/test_rasterize_rgb_th3.png', image)
     assert np.mean(np.abs(ref - image)) < 1e-8
 
-    # def test_backward_silhouette():
-    #     """Backward if non-zero gradient is out of a face."""
-    #
-    #     grad_ref = [
-    #         [1.6725862, -0.26021874, 0.],
-    #         [1.41986704, -1.64284933, 0.],
-    #         [0., 0., 0.],
-    #     ]
-    #     vertices = [[0.8, 0.8, 1.], [0.0, -0.5, 1.], [0.2, -0.4, 1.]]
-    #     faces = [[0, 1, 2]]
-    #
-    #     vertices = cp.array(vertices, 'float32')
-    #     faces = cp.array(faces, 'int32')
-    #     grad_ref = cp.array(grad_ref, 'float32')
-    #     vertices, faces, grad_ref = utils.to_minibatch((vertices, faces, grad_ref))
-    #     pxi = 35
-    #     pyi = 25
-    #
-    #     renderer = Renderer()
-    #     renderer.image_size = 64
-    #     renderer.anti_aliasing = False
-    #     renderer.fill_back = False
-    #     renderer.perspective = False
-    #     print(vertices.shape)
-    #     print(faces.shape)
-    #     vertices = chainer.Variable(vertices)
-    #     images = renderer.render_silhouettes(vertices, faces)
-    #     loss = cf.sum(cf.absolute(images[:, pyi, pxi] - 1))
-    #     loss.backward()
-    #     chainer.testing.assert_allclose(vertices.grad, grad_ref, rtol=1e-2)
-    #
-    #
+
+def test_backward_case1():
+    """Backward if non-zero gradient is out of a face."""
+
+    vertices = [[0.8, 0.8, 1.], [0.0, -0.5, 1.], [0.2, -0.4, 1.]]
+    faces = [[0, 1, 2]]
+    pxi = 35
+    pyi = 25
+    grad_ref = [
+        [1.6725862, -0.26021874, 0.],
+        [1.41986704, -1.64284933, 0.],
+        [0., 0., 0.],
+    ]
+
+    renderer = Renderer()
+    renderer.image_size = 64
+    renderer.anti_aliasing = False
+    renderer.perspective = False
+    renderer.light_intensity_ambient = 1.0
+    renderer.light_intensity_directional = 0.0
+
+    vertices = cp.array(vertices, 'float32')
+    faces = cp.array(faces, 'int32')
+    textures = cp.ones((faces.shape[0], 4, 4, 4, 3), 'float32')
+    grad_ref = cp.array(grad_ref, 'float32')
+    vertices, faces, textures, grad_ref = utils.to_minibatch(
+        (vertices, faces, textures, grad_ref))
+    vertices = chainer.Variable(vertices)
+
+    images = renderer.render(vertices, faces, textures)
+    images = cf.mean(images, axis=1)
+    loss = cf.sum(cf.absolute(images[:, pyi, pxi] - 1))
+    loss.backward()
+
+    chainer.testing.assert_allclose(vertices.grad, grad_ref, rtol=1e-2)
 
 
-# def test_backward_silhouette_th():
-#     """Backward if non-zero gradient is out of a face."""
-#
-#     vertices = np.array([[0.8, 0.8, 1.], [0.0, -0.5, 1.], [0.2, -0.4, 1.]])
-#     faces = np.array([[0, 1, 2]]).astype('int32')
-#     grad_ref = np.array([
-#         [1.6725862, -0.26021874, 0.],
-#         [1.41986704, -1.64284933, 0.],
-#         [0., 0., 0.],
-#     ])
-#     vertices, faces, grad_ref = utils.to_minibatch_th((vertices, faces,
-#                                                        grad_ref))
-#     print(vertices.shape, faces.shape)
-#
-#     faces.requires_grad = True
-#     vertices.requires_grad = True
-#     pxi = 35
-#     pyi = 25
-#     faces_th = preprocess_th(vertices, faces, perspective=False)
-#     rasterize_silhouettes_th = RasterizeSil(64, 0.1, 100, 1e-3, [0, 0, 0])
-#     images = rasterize_silhouettes_th(faces_th)
-#     loss = torch.sum(torch.abs(images[:, pyi, pxi] - 1))
-#     loss.backward(retain_graph=True)
-#     assert (vertices.grad - grad_ref).abs().mean() < 1e-3
-#
-#
-# def test_backward_silhouette_ch_2():
-#     """Backward if non-zero gradient is on a face."""
-#
-#     vertices = np.array([[0.8, 0.8, 1.], [-0.5, -0.8, 1.], [0.8, -0.8, 1.]])
-#     faces = np.array([[0, 1, 2]])
-#     pyi = 40
-#     pxi = 50
-#     grad_ref = np.array([
-#         [0.98646867, 1.04628897, 0.],
-#         [-1.03415668, -0.10403691, 0.],
-#         [3.00094461, -1.55173182, 0.],
-#     ])
-#
-#     renderer = Renderer()
-#     renderer.image_size = 64
-#     renderer.anti_aliasing = False
-#     renderer.perspective = False
-#
-#     # Prepare chainer inputs
-#     vertices = cp.array(vertices, 'float32')
-#     faces = cp.array(faces, 'int32')
-#     grad_ref = cp.array(grad_ref, 'float32')
-#     vertices, faces, grad_ref = utils.to_minibatch((vertices, faces, grad_ref))
-#     vertices = chainer.Variable(vertices)
-#     images = renderer.render_silhouettes(vertices, faces)
-#     loss = cf.sum(cf.absolute(images[:, pyi, pxi]))
-#     loss.backward()
-#
-#     chainer.testing.assert_allclose(vertices.grad, grad_ref, rtol=1e-2)
-#
-#
-# def test_backward_silhouette_th_2():
-#     """Backward if non-zero gradient is on a face."""
-#
-#     vertices = np.array([[0.8, 0.8, 1.], [-0.5, -0.8, 1.], [0.8, -0.8, 1.]])
-#     faces = np.array([[0, 1, 2]])
-#     pyi = 40
-#     pxi = 50
-#     grad_ref = np.array([
-#         [0.98646867, 1.04628897, 0.],
-#         [-1.03415668, -0.10403691, 0.],
-#         [3.00094461, -1.55173182, 0.],
-#     ])
-#     vertices, faces, grad_ref = utils.to_minibatch_th((vertices, faces,
-#                                                        grad_ref))
-#     faces.requires_grad = True
-#     vertices.requires_grad = True
-#     faces_th = preprocess_th(vertices, faces, perspective=False)
-#     rasterize_silhouettes_th = RasterizeSil(64, 0.1, 100, 1e-3, [0, 0, 0])
-#     images = rasterize_silhouettes_th(faces_th)
-#     loss = torch.sum(torch.abs(images[:, pyi, pxi]))
-#     loss.backward(retain_graph=True)
-#     assert (vertices.grad - grad_ref).abs().mean() < 1e-3
+def test_backward_rgb_th1():
+    """Backward if non-zero gradient is out of a face."""
+
+    vertices = np.array([[0.8, 0.8, 1.], [0.0, -0.5, 1.], [0.2, -0.4, 1.]])
+    faces = np.array([[0, 1, 2]]).astype('int32')
+    textures = np.ones((faces.shape[0], 4, 4, 4, 3), 'float32')
+    pxi = 35
+    pyi = 25
+    grad_ref = np.array([
+        [1.6725862, -0.26021874, 0.],
+        [1.41986704, -1.64284933, 0.],
+        [0., 0., 0.],
+    ])
+    vertices, faces, textures, grad_ref = utils.to_minibatch_th(
+        (vertices, faces, textures, grad_ref))
+
+    faces.requires_grad = True
+    vertices.requires_grad = True
+    faces_th = preprocess_th(vertices, faces, perspective=False)
+    rasterize_th = RasterizeRGB(64, 0.1, 100, 1e-3, [0, 0, 0])
+    images = rasterize_th(faces_th, textures)
+    images = images.mean(dim=1)
+    loss = torch.sum(torch.abs(images[:, pyi, pxi] - 1))
+    loss.backward(retain_graph=True)
+    assert (vertices.grad - grad_ref).abs().mean() < 1e-3
+
+
+def test_backward_silhouette_th_2():
+    """Backward if non-zero gradient is on a face."""
+
+    vertices = np.array([[0.8, 0.8, 1.], [-0.5, -0.8, 1.], [0.8, -0.8, 1.]])
+    faces = np.array([[0, 1, 2]])
+    textures = np.ones((faces.shape[0], 4, 4, 4, 3), 'float32')
+    pyi = 40
+    pxi = 50
+    grad_ref = np.array([
+        [0.98646867, 1.04628897, 0.],
+        [-1.03415668, -0.10403691, 0.],
+        [3.00094461, -1.55173182, 0.],
+    ])
+    # Add lighting
+    light_intensity_ambient = 1
+    light_intensity_directional = 0
+    light_color_ambient = [1, 1, 1]  # white
+    light_color_directional = [1, 1, 1]  # white
+    light_direction = [0, 1, 0]  # up-to-down
+    vertices, faces, textures, grad_ref = utils.to_minibatch_th(
+        (vertices, faces, textures, grad_ref))
+    faces_lighting = vertices_to_faces_th(vertices, faces)
+    textures = lighting_th(faces_lighting, textures, light_intensity_ambient,
+                           light_intensity_directional, light_color_ambient,
+                           light_color_directional, light_direction)
+
+    faces.requires_grad = True
+    vertices.requires_grad = True
+    faces_th = preprocess_th(vertices, faces, perspective=False)
+    rasterize_silhouettes_th = RasterizeRGB(64, 0.1, 100, 1e-3, [0, 0, 0])
+    images = rasterize_silhouettes_th(faces_th, textures)
+    images = images.mean(dim=1)
+    loss = torch.sum(torch.abs(images[:, pyi, pxi]))
+    loss.backward(retain_graph=True)
+    assert (vertices.grad - grad_ref).abs().mean() < 1e-3

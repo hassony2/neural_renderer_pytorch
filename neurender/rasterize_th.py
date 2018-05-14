@@ -82,6 +82,12 @@ class RasterizeRGBF(Function):
         chainer.cuda.to_gpu(grad_cp)
         ctx.outputs.grad = grad_cp
         ctx.outputs.backward()
-        back = ctx.inputs[0].grad.get()
-        back = torch.Tensor(back)
-        return back, None
+
+        # Get vertices gradients
+        back_verts = ctx.inputs[0].grad.get()
+        back_verts = torch.Tensor(back_verts)
+
+        # Get textures gradients
+        back_text = ctx.inputs[1].grad.get()
+        back_text = torch.Tensor(back_text)
+        return back_verts, back_text, None
