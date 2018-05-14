@@ -8,7 +8,7 @@ from neurender.rasterize import Rasterize
 from neurender.rasterize import rasterize_silhouettes as rasterize_silhouettes_ch
 
 
-class RasterizeTh(torch.nn.Module):
+class RasterizeSil(torch.nn.Module):
     def __init__(self, image_size, near, far, eps, background_color):
         super().__init__()
         self.image_size = image_size
@@ -19,11 +19,11 @@ class RasterizeTh(torch.nn.Module):
         self.rasterize = lambda faces: rasterize_silhouettes_ch(faces, image_size, False, near, far, eps)
 
     def forward(self, inputs):
-        out = RasterizeSil.apply(inputs, self.rasterize)
+        out = RasterizeSilF.apply(inputs, self.rasterize)
         return out
 
 
-class RasterizeSil(Function):
+class RasterizeSilF(Function):
     @staticmethod
     def forward(ctx, faces, rasterize):
         ctx.rasterize = rasterize

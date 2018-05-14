@@ -20,10 +20,9 @@ from neurender.look_at import look_at
 from neurender.perspective_th import perspective_th
 from neurender.vertices_to_faces import vertices_to_faces_th
 from neurender.look_at_th import look_at_th
-from neurender.rasterize_th import RasterizeTh
+from neurender.rasterize_th import RasterizeSil
 
 
-@pytest.mark.skip(reason="slow")
 def preprocess_th(vertices_th, faces_th, viewing_angle=30, perspective=True):
     eye = [0, 0, -(1. / math.tan(math.radians(viewing_angle)) + 1)]
     look_at_vertices_th = look_at_th(vertices_th, eye)
@@ -60,7 +59,6 @@ def test_compare_preprocess_teapot():
     assert np.mean(np.abs(faces_2.data.get() - faces_2_th.numpy())) < 1e-5
 
 
-@pytest.mark.skip(reason="slow")
 def test_compare_preprocess_simple():
     # Prepare chainer arrays
     viewing_angle = 30
@@ -93,7 +91,6 @@ def test_compare_preprocess_simple():
     assert np.mean(np.abs(faces_2.data.get() - faces_2_th.numpy())) < 1e-5
 
 
-@pytest.mark.skip(reason="slow")
 def test_forward_chainer():
     """Whether a silhouette by neural renderer matches that by Blender."""
 
@@ -118,7 +115,6 @@ def test_forward_chainer():
     chainer.testing.assert_allclose(ref, image)
 
 
-@pytest.mark.skip(reason="slow")
 def test_forward_th():
     """Whether a silhouette by neural renderer matches that by Blender."""
 
@@ -194,7 +190,7 @@ def test_backward_silhouette_th():
     pxi = 35
     pyi = 25
     faces_th = preprocess_th(vertices, faces, perspective=False)
-    rasterize_silhouettes_th = RasterizeTh(64, 0.1, 100, 1e-3, [0, 0, 0])
+    rasterize_silhouettes_th = RasterizeSil(64, 0.1, 100, 1e-3, [0, 0, 0])
     images = rasterize_silhouettes_th(faces_th)
     loss = torch.sum(torch.abs(images[:, pyi, pxi] - 1))
     loss.backward(retain_graph=True)
@@ -249,7 +245,7 @@ def test_backward_silhouette_th_2():
     faces.requires_grad = True
     vertices.requires_grad = True
     faces_th = preprocess_th(vertices, faces, perspective=False)
-    rasterize_silhouettes_th = RasterizeTh(64, 0.1, 100, 1e-3, [0, 0, 0])
+    rasterize_silhouettes_th = RasterizeSil(64, 0.1, 100, 1e-3, [0, 0, 0])
     images = rasterize_silhouettes_th(faces_th)
     loss = torch.sum(torch.abs(images[:, pyi, pxi]))
     loss.backward(retain_graph=True)
