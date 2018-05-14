@@ -199,3 +199,58 @@ def test_backward_silhouette_th():
     loss = torch.sum(torch.abs(images[:, pyi, pxi] - 1))
     loss.backward(retain_graph=True)
     assert (vertices.grad - grad_ref).abs().mean() < 1e-3
+
+
+def test_backward_silhouette_ch_2():
+    """Backward if non-zero gradient is on a face."""
+
+    vertices = np.array([[0.8, 0.8, 1.], [-0.5, -0.8, 1.], [0.8, -0.8, 1.]])
+    faces = np.array([[0, 1, 2]])
+    pyi = 40
+    pxi = 50
+    grad_ref = np.array([
+        [0.98646867, 1.04628897, 0.],
+        [-1.03415668, -0.10403691, 0.],
+        [3.00094461, -1.55173182, 0.],
+    ])
+
+    renderer = Renderer()
+    renderer.image_size = 64
+    renderer.anti_aliasing = False
+    renderer.perspective = False
+
+    # Prepare chainer inputs
+    vertices = cp.array(vertices, 'float32')
+    faces = cp.array(faces, 'int32')
+    grad_ref = cp.array(grad_ref, 'float32')
+    vertices, faces, grad_ref = utils.to_minibatch((vertices, faces, grad_ref))
+    vertices = chainer.Variable(vertices)
+    images = renderer.render_silhouettes(vertices, faces)
+    loss = cf.sum(cf.absolute(images[:, pyi, pxi]))
+    loss.backward()
+
+    chainer.testing.assert_allclose(vertices.grad, grad_ref, rtol=1e-2)
+
+
+def test_backward_silhouette_th_2():
+    """Backward if non-zero gradient is on a face."""
+
+    vertices = np.array([[0.8, 0.8, 1.], [-0.5, -0.8, 1.], [0.8, -0.8, 1.]])
+    faces = np.array([[0, 1, 2]])
+    pyi = 40
+    pxi = 50
+    grad_ref = np.array([
+        [0.98646867, 1.04628897, 0.],
+        [-1.03415668, -0.10403691, 0.],
+        [3.00094461, -1.55173182, 0.],
+    ])
+    vertices, faces, grad_ref = utils.to_minibatch_th((vertices, faces,
+                                                       grad_ref))
+    faces.requires_grad = True
+    vertices.requires_grad = True
+    faces_th = preprocess_th(vertices, faces, perspective=False)
+    rasterize_silhouettes_th = RasterizeTh(64, 0.1, 100, 1e-3, [0, 0, 0])
+    images = rasterize_silhouettes_th(faces_th)
+    loss = torch.sum(torch.abs(images[:, pyi, pxi]))
+    loss.backward(retain_graph=True)
+    assert (vertices.grad - grad_ref).abs().mean() < 1e-3
