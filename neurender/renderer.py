@@ -4,8 +4,9 @@ import chainer.functions as cf
 
 from neurender.perspective import perspective
 from neurender.vertices_to_faces import vertices_to_faces
-from neurender.rasterize import rasterize_silhouettes
+from neurender.rasterize import rasterize_silhouettes, rasterize
 from neurender.look_at import look_at
+from neurender.lighting import lighting
 
 
 class Renderer(object):

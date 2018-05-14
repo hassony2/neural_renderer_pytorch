@@ -5,7 +5,8 @@ import chainer.functions as cf
 from neurender.perspective_th import perspective_th
 from neurender.vertices_to_faces import vertices_to_faces_th
 from neurender.look_at_th import look_at_th
-from neurender.rasterize_th import rasterize_silhouettes
+from neurender.lighting import lighting_th
+from neurender.rasterize import rasterize_silhouettes, rasterize
 
 
 class Renderer(object):
@@ -59,16 +60,15 @@ class Renderer(object):
 
         # viewpoint transformation
         if self.camera_mode == 'look_at':
-            vertices = look_at(vertices, self.eye)
+            vertices = look_at_th(vertices, self.eye)
 
         # perspective transformation
         if self.perspective:
-            vertices = perspective(vertices, angle=self.viewing_angle)
+            vertices = perspective_th(vertices, angle=self.viewing_angle)
 
         # rasterization
-        faces = vertices_to_faces(vertices, faces)
-        images = neurender.rasterize_depth(faces, self.image_size,
-                                           self.anti_aliasing)
+        faces = vertices_to_faces_th(vertices, faces)
+        images = rasterize_depth(faces, self.image_size, self.anti_aliasing)
         return images
 
     def render(self, vertices, faces, textures):
@@ -79,24 +79,24 @@ class Renderer(object):
                 (textures, textures.transpose((0, 1, 4, 3, 2, 5))), axis=1)
 
         # lighting
-        faces_lighting = vertices_to_faces(vertices, faces)
-        textures = lighting(
+        faces_lighting = vertices_to_faces_th(vertices, faces)
+        textures = lighting_th(
             faces_lighting, textures, self.light_intensity_ambient,
             self.light_intensity_directional, self.light_color_ambient,
             self.light_color_directional, self.light_direction)
 
         # viewpoint transformation
         if self.camera_mode == 'look_at':
-            vertices = look_at(vertices, self.eye)
+            vertices = look_at_th(vertices, self.eye)
         elif self.camera_mode == 'look':
             vertices = look(vertices, self.eye, self.camera_direction)
 
         # perspective transformation
         if self.perspective:
-            vertices = perspective(vertices, angle=self.viewing_angle)
+            vertices = perspective_th(vertices, angle=self.viewing_angle)
 
         # rasterization
-        faces = vertices_to_faces(vertices, faces)
+        faces = vertices_to_faces_th(vertices, faces)
         images = rasterize(faces, textures, self.image_size,
                            self.anti_aliasing, self.near, self.far,
                            self.rasterizer_eps, self.background_color)
