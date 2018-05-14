@@ -1,6 +1,7 @@
 import math
 
 import chainer.functions as cf
+import torch
 
 from neurender.perspective_th import perspective_th
 from neurender.vertices_to_faces import vertices_to_faces_th
@@ -39,9 +40,14 @@ class Renderer(object):
         self.rasterizer_eps = 1e-3
 
     def render_silhouettes(self, vertices, faces):
+        if self.fill_back:
+            faces = torch.cat(
+                [faces, faces[:, :, faces.new([2, 1, 0]).long()]], dim=1)
         # viewpoint transformation
         if self.camera_mode == 'look_at':
             vertices = look_at_th(vertices, self.eye)
+        else:
+            raise NotImplementedError
 
         # perspective transformation
         if self.perspective:
@@ -56,11 +62,14 @@ class Renderer(object):
     def render_depth(self, vertices, faces):
         # fill back
         if self.fill_back:
-            faces = cf.concat((faces, faces[:, :, ::-1]), axis=1).data
+            faces = torch.cat(
+                [faces, faces[:, :, faces.new([2, 1, 0]).long()]], dim=1)
 
         # viewpoint transformation
         if self.camera_mode == 'look_at':
             vertices = look_at_th(vertices, self.eye)
+        elif self.camera_mode == 'look':
+            raise NotImplementedError
 
         # perspective transformation
         if self.perspective:
@@ -74,9 +83,10 @@ class Renderer(object):
     def render(self, vertices, faces, textures):
         # fill back
         if self.fill_back:
-            faces = cf.concat((faces, faces[:, :, ::-1]), axis=1).data
-            textures = cf.concat(
-                (textures, textures.transpose((0, 1, 4, 3, 2, 5))), axis=1)
+            faces = torch.cat(
+                [faces, faces[:, :, faces.new([2, 1, 0]).long()]], dim=1)
+            textures = torch.cat(
+                [textures, textures.permute(0, 1, 4, 3, 2, 5)], dim=1)
 
         # lighting
         faces_lighting = vertices_to_faces_th(vertices, faces)
@@ -89,6 +99,7 @@ class Renderer(object):
         if self.camera_mode == 'look_at':
             vertices = look_at_th(vertices, self.eye)
         elif self.camera_mode == 'look':
+            raise NotImplementedError
             vertices = look(vertices, self.eye, self.camera_direction)
 
         # perspective transformation

@@ -24,8 +24,13 @@ from neurender.lighting import lighting, lighting_th
 from neurender.rasterize_th import RasterizeSil, RasterizeRGB
 
 
-def preprocess_th(vertices_th, faces_th, viewing_angle=30, perspective=True):
-    eye = [0, 0, -(1. / math.tan(math.radians(viewing_angle)) + 1)]
+def preprocess_th(vertices_th,
+                  faces_th,
+                  viewing_angle=30,
+                  eye=None,
+                  perspective=True):
+    if eye is None:
+        eye = [0, 0, -(1. / math.tan(math.radians(viewing_angle)) + 1)]
     look_at_vertices_th = look_at_th(vertices_th, eye)
     if perspective:
         perspective_vertices_th = perspective_th(
@@ -36,6 +41,7 @@ def preprocess_th(vertices_th, faces_th, viewing_angle=30, perspective=True):
     return faces_th
 
 
+@pytest.mark.skip()
 def test_forward_ch_1():
     """Rendering a teapot without anti-aliasing."""
 
@@ -56,6 +62,7 @@ def test_forward_ch_1():
     scipy.misc.imsave('./tests/data/test_rasterize1.png', image)
 
 
+@pytest.mark.skip()
 def test_forward_th_1():
     """Rendering a teapot without anti-aliasing."""
 
@@ -107,10 +114,13 @@ def test_forward_th_2():
 
 
 def test_forward_rgb_th():
-    """Backward if non-zero gradient is out of a face."""
+    """Render teapot"""
     # load teapot
     vertices, faces, textures = utils.load_teapot_batch_th()
 
+    # Fill back by reversing face points order
+    faces = torch.cat([faces, faces[:, :, faces.new([2, 1, 0]).long()]], dim=1)
+    textures = torch.cat([textures, textures.permute(0, 1, 4, 3, 2, 5)], dim=1)
     # Add lighting
     light_intensity_ambient = 0.5
     light_intensity_directional = 0.5
@@ -121,7 +131,7 @@ def test_forward_rgb_th():
     textures = lighting_th(faces_lighting, textures, light_intensity_ambient,
                            light_intensity_directional, light_color_ambient,
                            light_color_directional, light_direction)
-    faces_th = preprocess_th(vertices, faces, perspective=False)
+    faces_th = preprocess_th(vertices, faces, perspective=True)
     rasterize_rgb_th = RasterizeRGB(256, 0.1, 100, 1e-3, [0, 0, 0])
     images = rasterize_rgb_th(faces_th, textures)
     image = images[2].cpu().numpy()
@@ -129,38 +139,100 @@ def test_forward_rgb_th():
     scipy.misc.imsave('./tests/data/test_rasterize_rgb_th1.png', image)
 
 
-# def test_backward_silhouette():
-#     """Backward if non-zero gradient is out of a face."""
-#
-#     grad_ref = [
-#         [1.6725862, -0.26021874, 0.],
-#         [1.41986704, -1.64284933, 0.],
-#         [0., 0., 0.],
-#     ]
-#     vertices = [[0.8, 0.8, 1.], [0.0, -0.5, 1.], [0.2, -0.4, 1.]]
-#     faces = [[0, 1, 2]]
-#
-#     vertices = cp.array(vertices, 'float32')
-#     faces = cp.array(faces, 'int32')
-#     grad_ref = cp.array(grad_ref, 'float32')
-#     vertices, faces, grad_ref = utils.to_minibatch((vertices, faces, grad_ref))
-#     pxi = 35
-#     pyi = 25
-#
-#     renderer = Renderer()
-#     renderer.image_size = 64
-#     renderer.anti_aliasing = False
-#     renderer.fill_back = False
-#     renderer.perspective = False
-#     print(vertices.shape)
-#     print(faces.shape)
-#     vertices = chainer.Variable(vertices)
-#     images = renderer.render_silhouettes(vertices, faces)
-#     loss = cf.sum(cf.absolute(images[:, pyi, pxi] - 1))
-#     loss.backward()
-#     chainer.testing.assert_allclose(vertices.grad, grad_ref, rtol=1e-2)
-#
-#
+def test_forward_rgb_th_2():
+    """Different viewpoint"""
+    # load teapot
+    vertices, faces, textures = utils.load_teapot_batch_th()
+
+    # Fill back by reversing face points order
+    faces = torch.cat([faces, faces[:, :, faces.new([2, 1, 0]).long()]], dim=1)
+    textures = torch.cat([textures, textures.permute(0, 1, 4, 3, 2, 5)], dim=1)
+    # Add lighting
+    light_intensity_ambient = 0.5
+    light_intensity_directional = 0.5
+    light_color_ambient = [1, 1, 1]  # white
+    light_color_directional = [1, 1, 1]  # white
+    light_direction = [0, 1, 0]  # up-to-down
+    faces_lighting = vertices_to_faces_th(vertices, faces)
+    textures = lighting_th(faces_lighting, textures, light_intensity_ambient,
+                           light_intensity_directional, light_color_ambient,
+                           light_color_directional, light_direction)
+    faces_th = preprocess_th(
+        vertices, faces, perspective=True, eye=[1, 1, -2.7])
+    rasterize_rgb_th = RasterizeRGB(256, 0.1, 100, 1e-3, [0, 0, 0])
+    images = rasterize_rgb_th(faces_th, textures)
+    image = images[2].cpu().numpy().transpose(1, 2, 0)
+
+    ref = scipy.misc.imread('./tests/data/test_rasterize2.png') / 255
+
+    scipy.misc.imsave('./tests/data/test_rasterize_rgb_th2.png', image)
+    assert np.mean(np.abs(ref - image)) < 1e-2
+
+
+def test_forward_rgb_th_3():
+    """Same silhouette as blender"""
+    # load teapot
+    vertices, faces, textures = utils.load_teapot_batch_th()
+
+    # Fill back by reversing face points order
+    faces = torch.cat([faces, faces[:, :, faces.new([2, 1, 0]).long()]], dim=1)
+    textures = torch.cat([textures, textures.permute(0, 1, 4, 3, 2, 5)], dim=1)
+    # Add lighting
+    light_intensity_ambient = 1
+    light_intensity_directional = 0
+    light_color_ambient = [1, 1, 1]  # white
+    light_color_directional = [1, 1, 1]  # white
+    light_direction = [0, 1, 0]  # up-to-down
+    faces_lighting = vertices_to_faces_th(vertices, faces)
+    textures = lighting_th(faces_lighting, textures, light_intensity_ambient,
+                           light_intensity_directional, light_color_ambient,
+                           light_color_directional, light_direction)
+    faces_th = preprocess_th(vertices, faces, perspective=True)
+    rasterize_rgb_th = RasterizeRGB(256, 0.1, 100, 1e-3, [0, 0, 0])
+    images = rasterize_rgb_th(faces_th, textures)
+    image = images[2].cpu().numpy().mean(0)
+
+    # Extract silhouette from blender image
+    ref = scipy.misc.imread('./tests/data/teapot_blender.png')
+    ref = ref.astype('float32')
+    ref = (ref.min(-1) != 255).astype('float32')
+    scipy.misc.imsave('./tests/data/test_rasterize_rgb_th3.png', image)
+    assert np.mean(np.abs(ref - image)) < 1e-8
+
+    # def test_backward_silhouette():
+    #     """Backward if non-zero gradient is out of a face."""
+    #
+    #     grad_ref = [
+    #         [1.6725862, -0.26021874, 0.],
+    #         [1.41986704, -1.64284933, 0.],
+    #         [0., 0., 0.],
+    #     ]
+    #     vertices = [[0.8, 0.8, 1.], [0.0, -0.5, 1.], [0.2, -0.4, 1.]]
+    #     faces = [[0, 1, 2]]
+    #
+    #     vertices = cp.array(vertices, 'float32')
+    #     faces = cp.array(faces, 'int32')
+    #     grad_ref = cp.array(grad_ref, 'float32')
+    #     vertices, faces, grad_ref = utils.to_minibatch((vertices, faces, grad_ref))
+    #     pxi = 35
+    #     pyi = 25
+    #
+    #     renderer = Renderer()
+    #     renderer.image_size = 64
+    #     renderer.anti_aliasing = False
+    #     renderer.fill_back = False
+    #     renderer.perspective = False
+    #     print(vertices.shape)
+    #     print(faces.shape)
+    #     vertices = chainer.Variable(vertices)
+    #     images = renderer.render_silhouettes(vertices, faces)
+    #     loss = cf.sum(cf.absolute(images[:, pyi, pxi] - 1))
+    #     loss.backward()
+    #     chainer.testing.assert_allclose(vertices.grad, grad_ref, rtol=1e-2)
+    #
+    #
+
+
 # def test_backward_silhouette_th():
 #     """Backward if non-zero gradient is out of a face."""
 #
