@@ -85,7 +85,7 @@ def lighting_th(faces,
         direction = direction.unsqueeze(0).repeat(bs, 1)
 
     # create light
-    light = torch.zeros(bs, nf, 3)
+    light = faces.new_full((bs, nf, 3), fill_value=0)
 
     # ambient light
     if intensity_ambient != 0:
