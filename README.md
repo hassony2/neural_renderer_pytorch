@@ -8,9 +8,13 @@ Most functions are an almost line-to-line translation of the original code and e
 ([rasterize](https://github.com/hassony2/neural_renderer_pytorch/blob/master/neurender/rasterize.py), [perspective](https://github.com/hassony2/neural_renderer_pytorch/blob/master/neurender/perspective.py), ...)
 have a pytorch equivalent ([rasterize_th](https://github.com/hassony2/neural_renderer_pytorch/blob/master/neurender/rasterize_th.py) [perspective_th](https://github.com/hassony2/neural_renderer_pytorch/blob/master/neurender/perspective_th.py))
 
-Some cleaning is still needed for a better separation of pytorch and chainer code, so that the pytorch code can be used without a chainer install).
+Some cleaning is still needed for a better separation of pytorch and chainer code.
 
 Compared to the original directory, the structure of the code is changes, and respects the folder structure.
+
+The tests have also been reproduced for the pytorch functions.
+
+For the forward/backward pass, a wrapper around chainer is used, therefore **chainer** needs to be installed ! 
 
 # Demo
 
