@@ -3,7 +3,7 @@ Neural Renderer Pytorch
 
 Pytorch implementation of [Neural Renderer](https://github.com/hiroharu-kato/neural_renderer)
 
-An other (better optimized !) implementation that does not require chainer is available by [Nikos Kolotouros](https://github.com/daniilidis-group/neural_renderer) 
+Another (better optimized !) implementation that does not require chainer is available by [Nikos Kolotouros](https://github.com/daniilidis-group/neural_renderer) 
 
 Mostly this code is a reimplementation of most utility functions provided py Neural Renderer.
 Most functions are an almost line-to-line translation of the original code and each function
