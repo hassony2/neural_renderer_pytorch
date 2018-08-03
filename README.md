@@ -19,14 +19,3 @@ For the forward/backward pass, a wrapper around chainer is used, therefore [chai
 # Demo
 
 `python examples/example_2_th.py`
-
-If you find this code useful for your research, please cite the original work 
-
-```
-@InProceedings{kato2018renderer
-    title={Neural 3D Mesh Renderer},
-    author={Kato, Hiroharu and Ushiku, Yoshitaka and Harada, Tatsuya},
-    booktitle={The IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
-    year={2018}
-}
-```
