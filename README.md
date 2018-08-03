@@ -14,7 +14,7 @@ Compared to the original directory, the structure of the code is changes, and re
 
 The tests have also been reproduced for the pytorch functions.
 
-For the forward/backward pass, a wrapper around chainer is used, therefore **chainer** needs to be installed ! 
+For the forward/backward pass, a wrapper around chainer is used, therefore [chainer](https://docs.chainer.org/en/stable/install.html) and ([PyTorch](https://pytorch.org/) of course as well) need to be installed ! 
 
 # Demo
 
